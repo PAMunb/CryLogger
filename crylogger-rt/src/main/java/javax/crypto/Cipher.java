@@ -257,6 +257,8 @@ import sun.security.util.*;
  */
 
 public class Cipher {
+    
+    static final SecureRandom RANDOM = new SecureRandom();
 
     // Android-note: Android reimplements provider selection.
     //
@@ -723,7 +725,7 @@ public class Cipher {
 
     static final Cipher createCipher(String transformation, Provider provider)
         throws NoSuchAlgorithmException, NoSuchPaddingException {
-        Providers.checkBouncyCastleDeprecation(provider, "Cipher", transformation);
+//        Providers.checkBouncyCastleDeprecation(provider, "Cipher", transformation);
         String[] tokenizedTransformation = tokenizeTransformation(transformation);
 
         CipherSpiAndProvider cipherSpiAndProvider = null;
@@ -1085,7 +1087,7 @@ public class Cipher {
      * by the underlying {@code CipherSpi}.
      */
     public final void init(int opmode, Key key) throws InvalidKeyException {
-        init(opmode, key, JceSecurity.RANDOM);
+        init(opmode, key, RANDOM);
     }
 
     /**
@@ -1232,7 +1234,7 @@ public class Cipher {
     public final void init(int opmode, Key key, AlgorithmParameterSpec params)
             throws InvalidKeyException, InvalidAlgorithmParameterException
     {
-        init(opmode, key, params, JceSecurity.RANDOM);
+        init(opmode, key, params, RANDOM);
     }
 
     /**
@@ -1381,7 +1383,7 @@ public class Cipher {
     public final void init(int opmode, Key key, AlgorithmParameters params)
             throws InvalidKeyException, InvalidAlgorithmParameterException
     {
-        init(opmode, key, params, JceSecurity.RANDOM);
+        init(opmode, key, params, RANDOM);
     }
 
     /**
@@ -1535,7 +1537,7 @@ public class Cipher {
     public final void init(int opmode, Certificate certificate)
             throws InvalidKeyException
     {
-        init(opmode, certificate, JceSecurity.RANDOM);
+        init(opmode, certificate, RANDOM);
     }
 
     /**

@@ -149,7 +149,7 @@ import java.security.CRYLogger;
 public final class URL implements java.io.Serializable {
 
     // Android-changed: Custom built-in URLStreamHandlers for http, https.
-    // static final String BUILTIN_HANDLERS_PREFIX = "sun.net.www.protocol";
+    static final String BUILTIN_HANDLERS_PREFIX = "sun.net.www.protocol";
     private static final Set<String> BUILTIN_HANDLER_CLASS_NAMES = createBuiltinHandlerClassNames();
     static final long serialVersionUID = -7627629688361524110L;
 
@@ -1504,8 +1504,8 @@ public final class URL implements java.io.Serializable {
 
     private boolean isBuiltinStreamHandler(String handlerClassName) {
         // Android-changed: Some built-in handlers (eg. HttpHandler) are not in sun.net.www.protocol.
-        // return (handlerClassName.startsWith(BUILTIN_HANDLERS_PREFIX));
-        return BUILTIN_HANDLER_CLASS_NAMES.contains(handlerClassName);
+        return (handlerClassName.startsWith(BUILTIN_HANDLERS_PREFIX));
+        //return BUILTIN_HANDLER_CLASS_NAMES.contains(handlerClassName);
     }
 
     private void resetState() {
