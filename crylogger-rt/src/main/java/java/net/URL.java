@@ -34,15 +34,16 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputStream.GetField;
 import java.io.ObjectStreamException;
 import java.io.ObjectStreamField;
+/* CRYLOGGER */
+import java.security.CRYLogger;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Set;
 import java.util.StringTokenizer;
-import sun.security.util.SecurityConstants;
 
-/* CRYLOGGER */
-import java.security.CRYLogger;
+import sun.net.util.IPAddressUtil;
+import sun.security.util.SecurityConstants;
 
 /**
  * Class {@code URL} represents a Uniform Resource
@@ -423,16 +424,28 @@ public final class URL implements java.io.Serializable {
 
         // Android-changed: App compat. Prepend '/' if host is null / empty
         // Parts parts = new Parts(file);
-        Parts parts = new Parts(file, host);
-        path = parts.getPath();
-        query = parts.getQuery();
-
-        if (query != null) {
+//        Parts parts = new Parts(file, host);
+//        path = parts.getPath();
+//        query = parts.getQuery();
+//
+//        if (query != null) {
+//            this.file = path + "?" + query;
+//        } else {
+//            this.file = path;
+//        }
+//        ref = parts.getRef();
+        int index = file.indexOf('#');
+        this.ref = index < 0 ? null : file.substring(index + 1);
+        file = index < 0 ? file : file.substring(0, index);
+        int q = file.lastIndexOf('?');
+        if (q != -1) {
+            this.query = file.substring(q + 1);
+            this.path = file.substring(0, q);
             this.file = path + "?" + query;
         } else {
+            this.path = file;
             this.file = path;
         }
-        ref = parts.getRef();
 
         // Note: we don't do validation of the URL here. Too risky to change
         // right now, but worth considering for future reference. -br
@@ -441,8 +454,25 @@ public final class URL implements java.io.Serializable {
             throw new MalformedURLException("unknown protocol: " + protocol);
         }
         this.handler = handler;
+        
+        if (host != null && isBuiltinStreamHandler(handler)) {
+            String s = IPAddressUtil.checkExternalForm(this);
+            if (s != null) {
+                throw new MalformedURLException(s);
+            }
+        }
+        if ("jar".equalsIgnoreCase(protocol)) {
+            if (handler instanceof sun.net.www.protocol.jar.Handler) {
+                // URL.openConnection() would throw a confusing exception
+                // so generate a better exception here instead.
+                String s = ((sun.net.www.protocol.jar.Handler) handler).checkNestedProtocol(file);
+                if (s != null) {
+                    throw new MalformedURLException(s);
+                }
+            }
+        }
     }
-
+    
     /**
      * Creates a {@code URL} object from the {@code String}
      * representation.
@@ -1072,6 +1102,30 @@ public final class URL implements java.io.Serializable {
         }
         return handler.openConnection(this, p);
     }
+    
+    /**
+     * Returns the address of the host represented by this URL.
+     * A {@link SecurityException} or an {@link UnknownHostException}
+     * while getting the host address will result in this method returning
+     * {@code null}
+     *
+     * @return an {@link InetAddress} representing the host
+     */
+    synchronized InetAddress getHostAddress() {
+        if (hostAddress != null) {
+            return hostAddress;
+        }
+
+        if (host == null || host.isEmpty()) {
+            return null;
+        }
+        try {
+            hostAddress = InetAddress.getByName(host);
+        } catch (UnknownHostException | SecurityException ex) {
+            return null;
+        }
+        return hostAddress;
+    }
 
     /**
      * Opens a connection to this {@code URL} and returns an
@@ -1502,11 +1556,17 @@ public final class URL implements java.io.Serializable {
         return replacementURL;
     }
 
-    private boolean isBuiltinStreamHandler(String handlerClassName) {
+    boolean isBuiltinStreamHandler(String handlerClassName) {
         // Android-changed: Some built-in handlers (eg. HttpHandler) are not in sun.net.www.protocol.
         return (handlerClassName.startsWith(BUILTIN_HANDLERS_PREFIX));
         //return BUILTIN_HANDLER_CLASS_NAMES.contains(handlerClassName);
     }
+    
+    boolean isBuiltinStreamHandler(URLStreamHandler handler) {
+        Class<?> handlerClass = handler.getClass();
+        return isBuiltinStreamHandler(handlerClass.getName());
+                  //|| VM.isSystemDomainLoader(handlerClass.getClassLoader());
+     }
 
     private void resetState() {
         this.protocol = null;
